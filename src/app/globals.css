@@ -79,6 +79,9 @@ body {
 .sidebar-link:hover  { background: rgba(255,255,255,0.1); color: #fff; }
 .sidebar-link.active { background: #fff; color: #3254D4; font-weight: 600; }
 
+/* Smooth scroll */
+html { scroll-behavior: smooth; }
+
 /* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
@@ -97,3 +100,8 @@ body {
   to   { opacity: 1; }
 }
 .animate-backdropIn { animation: backdropIn 0.2s ease-out; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-14px); }
+}
