@@ -11,8 +11,15 @@ import { supabase } from "@/lib/supabase";
 const ROLE_ROUTES: Record<string, string> = {
   admin:        "/admin",
   call_center:  "/call-center",
+  agent:        "/call-center",
   seller:       "/seller",
 };
+
+function deriveRole(email: string): string {
+  if (email === "admin@test.com")  return "admin";
+  if (email === "agent@test.com")  return "agent";
+  return "seller";
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -46,20 +53,53 @@ export default function LoginPage() {
       return;
     }
 
-    // 2 — Fetch role + status from the users table
-    const { data: profile, error: profileError } = await supabase
+    // 2 — Fetch profile; auto-create it if missing (user exists in auth but not in public.users)
+    let { data: profile, error: profileError } = await supabase
       .from("users")
       .select("role, status")
       .eq("id", authData.user.id)
       .single();
 
-    setLoading(false);
-
     if (profileError || !profile) {
-      console.error("[Login] Profile fetch error:", profileError);
-      setError("خطأ في بيانات المستخدم — تواصل مع الإدارة.");
-      return;
+      console.warn("[Login] Profile missing — creating automatically for:", authData.user.email);
+      const email     = authData.user.email ?? "";
+      const role      = deriveRole(email);
+      const name      = email.split("@")[0];
+
+      const { data: inserted, error: insertError } = await supabase
+        .from("users")
+        .insert({
+          id:            authData.user.id,
+          email,
+          password_hash: "managed_by_supabase_auth",
+          name,
+          phone:         "",
+          role,
+          status:        "active",
+        })
+        .select("role, status")
+        .single();
+
+      if (insertError || !inserted) {
+        setLoading(false);
+        console.error("[Login] Auto-create profile failed:", insertError);
+        setError("خطأ في إنشاء بيانات المستخدم — تواصل مع الإدارة.");
+        return;
+      }
+
+      // Create an empty wallet for sellers
+      if (role === "seller") {
+        await supabase.from("wallets").insert({
+          user_id:      authData.user.id,
+          balance:      0,
+          total_earned: 0,
+        });
+      }
+
+      profile = inserted;
     }
+
+    setLoading(false);
 
     if (profile.status !== "active") {
       await supabase.auth.signOut();
