@@ -34,7 +34,15 @@ export default function LoginPage() {
 
     if (authError || !authData.user) {
       setLoading(false);
-      setError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
+      console.error("[Login] Supabase auth error:", authError);
+      // Show specific message based on error type
+      if (authError?.message?.toLowerCase().includes("email not confirmed")) {
+        setError("البريد الإلكتروني غير مؤكد — يرجى التحقق من بريدك الإلكتروني أو تواصل مع الإدارة.");
+      } else if (authError?.message?.toLowerCase().includes("invalid login credentials")) {
+        setError("البريد الإلكتروني أو كلمة المرور غير صحيحة.");
+      } else {
+        setError(authError?.message ?? "خطأ في تسجيل الدخول — حاول مرة أخرى.");
+      }
       return;
     }
 
@@ -48,6 +56,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (profileError || !profile) {
+      console.error("[Login] Profile fetch error:", profileError);
       setError("خطأ في بيانات المستخدم — تواصل مع الإدارة.");
       return;
     }
