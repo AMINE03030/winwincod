@@ -94,12 +94,12 @@ const INIT_SELLERS: MockSeller[] = [
 ];
 
 const INIT_PRODUCTS: MockProduct[] = [
-  { id: 1, productId: "PRD-2001", title: "ساعة ذكية X1",          sourcingPrice: 120, sellingPrice: 299, stockQuantity: 45, isActive: true },
-  { id: 2, productId: "PRD-2002", title: "سماعات لاسلكية Pro",     sourcingPrice: 85,  sellingPrice: 199, stockQuantity: 22, isActive: true },
-  { id: 3, productId: "PRD-2003", title: "حقيبة ظهر مدرسية",      sourcingPrice: 95,  sellingPrice: 249, stockQuantity: 18, isActive: true },
-  { id: 4, productId: "PRD-2004", title: "حذاء رياضي نايكي",      sourcingPrice: 140, sellingPrice: 349, stockQuantity: 0,  isActive: true },
-  { id: 5, productId: "PRD-2005", title: "مجموعة عناية بالبشرة",  sourcingPrice: 65,  sellingPrice: 149, stockQuantity: 30, isActive: true },
-  { id: 6, productId: "PRD-2006", title: "مرطب شعر أرغان",        sourcingPrice: 45,  sellingPrice: 99,  stockQuantity: 60, isActive: true },
+  { id: 1, productId: "PRD-2001", title: "Montre connectée",    description: "Montre intelligente avec GPS et suivi santé",           sourcingPrice: 120, sellingPrice: 299, stockQuantity: 45, isActive: true },
+  { id: 2, productId: "PRD-2002", title: "Écouteurs Bluetooth", description: "Écouteurs sans fil avec réduction active de bruit",     sourcingPrice: 85,  sellingPrice: 199, stockQuantity: 22, isActive: true },
+  { id: 3, productId: "PRD-2003", title: "Sac à dos",           description: "Sac à dos résistant pour école et randonnée",           sourcingPrice: 95,  sellingPrice: 249, stockQuantity: 18, isActive: true },
+  { id: 4, productId: "PRD-2004", title: "Robot cuisine",       description: "Robot multifonctions 1200W avec 12 accessoires inclus", sourcingPrice: 280, sellingPrice: 599, stockQuantity: 0,  isActive: true },
+  { id: 5, productId: "PRD-2005", title: "Lampe LED",           description: "Lampe rechargeable 3 modes d'éclairage 10000 mAh",     sourcingPrice: 35,  sellingPrice: 89,  stockQuantity: 80, isActive: true },
+  { id: 6, productId: "PRD-2006", title: "Crème hydratante",    description: "Crème à l'huile d'argan 100% naturelle et bio",        sourcingPrice: 45,  sellingPrice: 99,  stockQuantity: 60, isActive: false },
 ];
 
 const INIT_ORDERS: MockOrder[] = [
@@ -190,6 +190,18 @@ interface AppState {
 
   // Admin — products
   addProduct: (data: Omit<MockProduct, "id" | "productId" | "isActive">) => void;
+  updateProduct: (productId: string, data: Partial<Pick<MockProduct, "title" | "description" | "sourcingPrice" | "sellingPrice" | "stockQuantity" | "isActive">>) => void;
+  toggleProductActive: (productId: string) => void;
+
+  // Supabase bridge — creates a virtual MockSeller from a real Supabase session
+  setSupabaseUser: (data: {
+    id: string;
+    name: string;
+    email: string;
+    role: Role;
+    walletBalance: number;
+    phone: string;
+  }) => void;
 
   // Getters
   getCurrentUser: () => MockSeller | null;
@@ -542,6 +554,43 @@ export const useStore = create<AppState>()((set, get) => ({
       isActive: true,
     };
     set((s) => ({ products: [...s.products, newProduct] }));
+  },
+
+  updateProduct(productId, data) {
+    set((s) => ({
+      products: s.products.map((p) =>
+        p.productId === productId ? { ...p, ...data } : p
+      ),
+    }));
+  },
+
+  toggleProductActive(productId) {
+    set((s) => ({
+      products: s.products.map((p) =>
+        p.productId === productId ? { ...p, isActive: !p.isActive } : p
+      ),
+    }));
+  },
+
+  // ── Supabase bridge ───────────────────────────────────────────────────────
+
+  setSupabaseUser({ id, name, email, role, walletBalance, phone }) {
+    const virtual: MockSeller = {
+      id: Date.now(),
+      sellerId: id,
+      name,
+      email,
+      phone,
+      password: "",
+      role,
+      walletBalance,
+      blocked: false,
+      createdAt: new Date().toISOString().split("T")[0],
+    };
+    set((s) => ({
+      sellers: [...s.sellers.filter((sel) => sel.sellerId !== id), virtual],
+      currentUserId: id,
+    }));
   },
 
   // ── Getters ───────────────────────────────────────────────────────────────
