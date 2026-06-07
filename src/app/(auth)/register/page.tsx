@@ -36,6 +36,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     // 1 — Create auth user in Supabase
+    console.log("[Register] anon key prefix:", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 20));
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email:    form.email,
       password: form.password,
@@ -43,7 +44,7 @@ export default function RegisterPage() {
 
     if (authError || !authData.user) {
       setLoading(false);
-      // Provide a readable Arabic error for the most common case
+      console.error("[Register] signUp error:", authError);
       if (authError?.message?.includes("already registered")) {
         setError("البريد الإلكتروني مستخدم بالفعل");
       } else {
