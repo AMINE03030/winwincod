@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-primary:       #4361EE;
+  --color-primary-dark:  #3254D4;
+  --color-primary-light: #EEF2FF;
+  --color-accent:        #FB923C;
+  --color-accent-light:  #FFF7ED;
+  --color-success:       #16A34A;
+  --color-success-light: #F0FDF4;
+  --color-danger:        #DC2626;
+  --color-danger-light:  #FEF2F2;
+  --color-warning:       #F59E0B;
+  --color-surface:       #F8FAFC;
+  --color-card:          #FFFFFF;
+  --color-border:        #E2E8F0;
+  --color-text:          #1E293B;
+  --color-muted:         #64748B;
+  --color-hint:          #94A3B8;
+  --font-arabic:         'Cairo', sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { direction: rtl; }
+
+body {
+  background-color: #F8FAFC;
+  color: #1E293B;
+  font-family: 'Cairo', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #F1F5F9; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #4361EE; }
+
+/* Card utility */
+.card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+}
+.card-primary   { border-top: 3px solid #4361EE; }
+.card-financial { border-top: 3px solid #FB923C; }
+.card-success   { border-top: 3px solid #16A34A; }
+
+/* Logo */
+.logo-winwin { color: #4361EE; }
+.logo-cod    { color: #FB923C; }
+
+/* Wallet hero card */
+.wallet-hero {
+  background: linear-gradient(135deg, #4361EE 0%, #3254D4 100%);
+  border-radius: 16px;
+}
+
+/* Status badges */
+.badge-pending   { background: #EEF2FF; color: #4338CA; border: 1px solid #C7D2FE; }
+.badge-confirm   { background: #FFF7ED; color: #C2410C; border: 1px solid #FED7AA; }
+.badge-ship      { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
+.badge-delivered { background: #F0FDF4; color: #16A34A; border: 1px solid #BBF7D0; }
+.badge-cancelled { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
+.badge-noanswer  { background: #F8FAFC; color: #64748B; border: 1px solid #CBD5E1; }
+
+/* Status old compat (used by Badge component) */
+.status-pending-balance { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
+.status-pending-confirm { background: #FFF7ED; color: #C2410C; border: 1px solid #FED7AA; }
+.status-ready-to-ship   { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
+.status-delivered       { background: #F0FDF4; color: #16A34A; border: 1px solid #BBF7D0; }
+.status-cancelled       { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
+
+/* Sidebar */
+.sidebar-link        { color: rgba(255,255,255,0.7); border-radius: 10px; transition: all 0.15s; }
+.sidebar-link:hover  { background: rgba(255,255,255,0.1); color: #fff; }
+.sidebar-link.active { background: #fff; color: #3254D4; font-weight: 600; }
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn { animation: fadeIn 0.2s ease-out; }
+
+@keyframes slideInFromRight {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+.animate-slideIn { animation: slideInFromRight 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
+
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-backdropIn { animation: backdropIn 0.2s ease-out; }
