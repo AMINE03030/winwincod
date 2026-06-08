@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -23,12 +23,14 @@
 
 * { box-sizing: border-box; }
 
-html { direction: rtl; }
+/* direction and font are set dynamically via lang attribute in layout.tsx */
+html[lang="ar"] body { font-family: 'Cairo', sans-serif; }
+html[lang="fr"] body { font-family: 'Inter', sans-serif; }
 
 body {
   background-color: #F8FAFC;
   color: #1E293B;
-  font-family: 'Cairo', sans-serif;
+  font-family: 'Cairo', sans-serif; /* fallback — overridden by lang rules above */
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
 }

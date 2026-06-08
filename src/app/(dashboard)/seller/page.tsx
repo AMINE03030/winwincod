@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { useStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 import type { OrderStatus } from "@/lib/store";
@@ -16,7 +17,6 @@ import Link from "next/link";
 // ── Detect Supabase UUID vs mock ID (e.g. "USR-1001")
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// ── Unified display type used by both Supabase and mock data paths
 type DisplayOrder = {
   orderId:      string;
   customerName: string;
@@ -27,7 +27,6 @@ type DisplayOrder = {
   totalCost:    number;
 };
 
-// ── Raw Supabase order row
 type SupabaseOrder = {
   id:            string;
   tracking_id:   string | null;
@@ -45,7 +44,6 @@ function normaliseSupabaseOrder(o: SupabaseOrder): DisplayOrder {
     customerName: o.customer_name,
     city:         o.city,
     productTitle: o.product,
-    // Status values in Supabase follow the same UPPER_SNAKE convention we use everywhere
     status:       (o.status || "PENDING_CONFIRM") as OrderStatus,
     createdAt:    new Date(o.created_at).toLocaleString("fr-MA"),
     totalCost:    Number(o.amount),
@@ -53,12 +51,13 @@ function normaliseSupabaseOrder(o: SupabaseOrder): DisplayOrder {
 }
 
 export default function SellerDashboard() {
+  const t = useTranslations("SellerDashboard");
+  const locale = useLocale();
   const { getCurrentUser, getSellerOrders } = useStore();
   const user = getCurrentUser();
 
   const [supaOrders, setSupaOrders] = useState<DisplayOrder[] | null>(null);
 
-  // Fetch real orders from Supabase when the logged-in user has a UUID seller ID
   useEffect(() => {
     if (!user || !UUID_RE.test(user.sellerId)) return;
 
@@ -83,7 +82,6 @@ export default function SellerDashboard() {
 
   if (!user) return null;
 
-  // Use Supabase orders for real accounts, fall back to the mock store for demo accounts
   const orders: DisplayOrder[] =
     supaOrders !== null
       ? supaOrders
@@ -110,28 +108,34 @@ export default function SellerDashboard() {
   const frozen = orders.filter((o) => o.status === "PENDING_BALANCE");
 
   const statCards = [
-    { label: "إجمالي الطلبات", value: stats.total,          icon: ShoppingCart, color: "#4361EE", bg: "#EEF2FF", variant: "default"  as const },
-    { label: "انتظار تأكيد",   value: stats.pendingConfirm, icon: Clock,        color: "#C2410C", bg: "#FFF7ED", variant: "default"  as const },
-    { label: "جاهز للشحن",     value: stats.readyToShip,    icon: TrendingUp,   color: "#1D4ED8", bg: "#EFF6FF", variant: "default"  as const },
-    { label: "تم التسليم",      value: stats.delivered,      icon: CheckCircle,  color: "#16A34A", bg: "#F0FDF4", variant: "success"  as const },
+    { label: t("totalOrders"),   value: stats.total,          icon: ShoppingCart, color: "#4361EE", bg: "#EEF2FF", variant: "default"  as const },
+    { label: t("pendingConfirm"), value: stats.pendingConfirm, icon: Clock,        color: "#C2410C", bg: "#FFF7ED", variant: "default"  as const },
+    { label: t("readyToShip"),    value: stats.readyToShip,    icon: TrendingUp,   color: "#1D4ED8", bg: "#EFF6FF", variant: "default"  as const },
+    { label: t("delivered"),      value: stats.delivered,      icon: CheckCircle,  color: "#16A34A", bg: "#F0FDF4", variant: "success"  as const },
+  ];
+
+  const dateLocale = locale === "ar" ? "ar-MA" : "fr-MA";
+  const todayStr = new Date().toLocaleDateString(dateLocale, {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+
+  const colHeaders = [
+    t("colOrder"), t("colCustomer"), t("colCity"),
+    t("colProduct"), t("colStatus"), t("colDate"),
   ];
 
   return (
     <div className="flex flex-col min-h-full bg-[#F8FAFC]">
-      <Header title="لوحة القيادة" />
+      <Header title={t("headerTitle")} />
 
       <div className="flex-1 p-6 space-y-6">
         {/* Welcome + CTA */}
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-[#1E293B]">
-              مرحباً، <span style={{ color: "#4361EE" }}>{user.name.split(" ")[0]}</span> 👋
+              {t("greeting")}, <span style={{ color: "#4361EE" }}>{user.name.split(" ")[0]}</span> 👋
             </h2>
-            <p className="text-[#64748B] text-sm mt-0.5">
-              {new Date().toLocaleDateString("ar-MA", {
-                weekday: "long", year: "numeric", month: "long", day: "numeric",
-              })}
-            </p>
+            <p className="text-[#64748B] text-sm mt-0.5">{todayStr}</p>
           </div>
           <Link
             href="/seller/orders/new"
@@ -139,7 +143,7 @@ export default function SellerDashboard() {
             style={{ background: "#4361EE" }}
           >
             <Plus className="w-4 h-4" />
-            إضافة طلب
+            {t("addOrder")}
           </Link>
         </div>
 
@@ -151,21 +155,21 @@ export default function SellerDashboard() {
             style={{ background: "linear-gradient(135deg, #4361EE 0%, #3254D4 100%)" }}
           >
             <div>
-              <p className="text-white/70 text-xs font-medium">رصيد المحفظة</p>
+              <p className="text-white/70 text-xs font-medium">{t("walletBalance")}</p>
               <p className="text-3xl font-black mt-1">{formatMAD(user.walletBalance)}</p>
             </div>
             <div className="flex gap-3 mt-4">
               <div className="flex-1 rounded-lg p-3" style={{ background: "rgba(255,255,255,0.15)" }}>
-                <p className="text-white/60 text-[10px]">طلبات معلقة</p>
+                <p className="text-white/60 text-[10px]">{t("pendingOrders")}</p>
                 <p className="text-white font-bold text-lg">{stats.pendingBalance}</p>
               </div>
               <div className="flex-1 rounded-lg p-3" style={{ background: "rgba(255,255,255,0.15)" }}>
-                <p className="text-white/60 text-[10px]">تم التسليم</p>
+                <p className="text-white/60 text-[10px]">{t("delivered")}</p>
                 <p className="text-white font-bold text-lg">{stats.delivered}</p>
               </div>
             </div>
             <Link href="/seller/wallet" className="mt-3 text-xs text-white/60 hover:text-white transition-colors">
-              إدارة المحفظة ←
+              {t("manageWallet")}
             </Link>
           </div>
 
@@ -193,9 +197,9 @@ export default function SellerDashboard() {
               >
                 <AlertCircle className="w-5 h-5 text-[#DC2626] flex-shrink-0" />
                 <div className="flex-1">
-                  <p className="text-[#991B1B] font-semibold text-sm">طلب معلق — رصيد غير كافٍ</p>
+                  <p className="text-[#991B1B] font-semibold text-sm">{t("frozenAlert")}</p>
                   <p className="text-[#DC2626] text-xs mt-0.5">
-                    {o.orderId} · {o.productTitle} · يحتاج{" "}
+                    {o.orderId} · {o.productTitle} · {t("frozenNeeds")}{" "}
                     <strong>{formatMAD(o.totalCost)}</strong>
                   </p>
                 </div>
@@ -204,7 +208,7 @@ export default function SellerDashboard() {
                   className="text-xs font-bold px-3 py-1.5 rounded-lg text-white flex-shrink-0"
                   style={{ background: "#FB923C" }}
                 >
-                  شحن المحفظة
+                  {t("topUpWallet")}
                 </Link>
               </div>
             ))}
@@ -214,26 +218,24 @@ export default function SellerDashboard() {
         {/* Recent orders table */}
         <Card>
           <CardHeader>
-            <CardTitle>آخر الطلبات</CardTitle>
+            <CardTitle>{t("recentOrders")}</CardTitle>
             <Link
               href="/seller/orders"
               className="text-xs font-semibold hover:underline"
               style={{ color: "#4361EE" }}
             >
-              عرض الكل ←
+              {t("viewAll")}
             </Link>
           </CardHeader>
 
           {recent.length === 0 ? (
-            <p className="text-center text-[#94A3B8] py-8 text-sm">
-              لا توجد طلبات بعد — أضف طلبك الأول!
-            </p>
+            <p className="text-center text-[#94A3B8] py-8 text-sm">{t("noOrders")}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[#F1F5F9]">
-                    {["رقم الطلب", "العميل", "المدينة", "المنتج", "الحالة", "التاريخ"].map((h) => (
+                    {colHeaders.map((h) => (
                       <th
                         key={h}
                         className="pb-3 text-right text-xs font-semibold text-[#94A3B8] px-3 first:pr-0"

@@ -1,20 +1,10 @@
 "use client";
 
+import { useTranslations, useLocale } from "next-intl";
 import { useStore } from "@/lib/store";
 import { formatMAD } from "@/lib/utils";
 import { OrderStatusBadge } from "@/components/ui/Badge";
 import { Users, ShoppingCart, TrendingUp, CircleDollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
-
-// ── Static mock data for charts (week of Jun 1–7, 2026) ──────────────────────
-const WEEK_ORDERS = [
-  { day: "الأحد",     date: "01 يون", orders: 8  },
-  { day: "الاثنين",   date: "02 يون", orders: 14 },
-  { day: "الثلاثاء",  date: "03 يون", orders: 22 },
-  { day: "الأربعاء",  date: "04 يون", orders: 18 },
-  { day: "الخميس",    date: "05 يون", orders: 27 },
-  { day: "الجمعة",    date: "06 يون", orders: 35 },
-  { day: "السبت",     date: "07 يون", orders: 31, isToday: true },
-];
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -52,12 +42,14 @@ function KPICard({
   );
 }
 
-function WeeklyBarChart() {
-  const max = Math.max(...WEEK_ORDERS.map((d) => d.orders));
+function WeeklyBarChart({ data }: {
+  data: { day: string; orders: number; isToday?: boolean }[];
+}) {
+  const max = Math.max(...data.map((d) => d.orders));
   return (
     <div className="flex items-end gap-1.5 h-32">
-      {WEEK_ORDERS.map((d, i) => (
-        <div key={i} className="flex-1 flex flex-col items-center gap-1" title={`${d.date}: ${d.orders} طلب`}>
+      {data.map((d, i) => (
+        <div key={i} className="flex-1 flex flex-col items-center gap-1">
           <span className="text-[9px] font-bold" style={{ color: d.isToday ? "#4361EE" : "#94A3B8" }}>
             {d.orders}
           </span>
@@ -118,7 +110,23 @@ function TopSellersChart({ items }: { items: { name: string; count: number; sell
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminDashboardPage() {
+  const t = useTranslations("AdminDashboard");
+  const locale = useLocale();
+  const dateLocale = locale === "ar" ? "ar-MA" : "fr-MA";
+
   const { sellers, orders, transactions } = useStore();
+
+  // Week data derived from real dates (June 1–7, 2026)
+  const baseDate = new Date(2026, 5, 1);
+  const weekCounts = [8, 14, 22, 18, 27, 35, 31];
+  const weekData = weekCounts.map((count, i) => {
+    const date = new Date(baseDate.getTime() + i * 86400000);
+    return {
+      day:     date.toLocaleDateString(dateLocale, { weekday: "long" }),
+      orders:  count,
+      isToday: i === 6,
+    };
+  });
 
   const sellerList = sellers.filter((s) => s.role === "SELLER");
   const activeSellers = sellerList.filter((s) => !s.blocked).length;
@@ -126,8 +134,8 @@ export default function AdminDashboardPage() {
   const deliveredOrders = orders.filter((o) => o.status === "DELIVERED").length;
   const deliveryRate = totalOrders > 0 ? Math.round((deliveredOrders / totalOrders) * 100) : 0;
   const monthlyRevenue = transactions
-    .filter((t) => t.type === "DEPOSIT" && t.status === "APPROVED" && t.createdAt.startsWith("2026-06"))
-    .reduce((sum, t) => sum + t.amount, 0);
+    .filter((tx) => tx.type === "DEPOSIT" && tx.status === "APPROVED" && tx.createdAt.startsWith("2026-06"))
+    .reduce((sum, tx) => sum + tx.amount, 0);
 
   const topSellers = sellerList
     .map((s) => ({ ...s, count: orders.filter((o) => o.sellerId === s.sellerId).length }))
@@ -136,11 +144,17 @@ export default function AdminDashboardPage() {
 
   const recentOrders = [...orders].reverse().slice(0, 10);
 
+  const weekDateRange = `${new Date(2026, 5, 1).toLocaleDateString(dateLocale, { day: "2-digit", month: "short" })} – ${new Date(2026, 5, 7).toLocaleDateString(dateLocale, { day: "2-digit", month: "short", year: "numeric" })}`;
+
+  const todaySub = new Date(2026, 5, 7).toLocaleDateString(dateLocale, {
+    weekday: "long", day: "numeric", month: "long",
+  });
+
   const kpis = [
     {
-      label: "البائعون النشطون",
+      label: t("activeSellers"),
       value: String(activeSellers),
-      sub: `من أصل ${sellerList.length} بائع`,
+      sub: `${t("fromTotal")} ${sellerList.length} ${t("seller")}`,
       icon: Users,
       iconBg: "#EEF2FF",
       iconColor: "#4361EE",
@@ -148,9 +162,9 @@ export default function AdminDashboardPage() {
       trendUp: true,
     },
     {
-      label: "طلبات اليوم",
+      label: t("todayOrders"),
       value: "31",
-      sub: "السبت 07 يونيو",
+      sub: todaySub,
       icon: ShoppingCart,
       iconBg: "#FFF7ED",
       iconColor: "#C2410C",
@@ -158,9 +172,9 @@ export default function AdminDashboardPage() {
       trendUp: true,
     },
     {
-      label: "نسبة التسليم",
+      label: t("deliveryRate"),
       value: `${deliveryRate}%`,
-      sub: `${deliveredOrders} من ${totalOrders} طلب`,
+      sub: `${deliveredOrders} / ${totalOrders}`,
       icon: TrendingUp,
       iconBg: deliveryRate >= 60 ? "#F0FDF4" : "#FEF2F2",
       iconColor: deliveryRate >= 60 ? "#16A34A" : "#DC2626",
@@ -168,15 +182,20 @@ export default function AdminDashboardPage() {
       trendUp: deliveryRate >= 60,
     },
     {
-      label: "إيرادات يونيو",
+      label: t("monthRevenue"),
       value: formatMAD(monthlyRevenue),
-      sub: "إجمالي الإيداعات المعتمدة",
+      sub: t("approvedDeposits"),
       icon: CircleDollarSign,
       iconBg: "#FFF7ED",
       iconColor: "#FB923C",
       trend: "+18%",
       trendUp: true,
     },
+  ];
+
+  const colHeaders = [
+    t("colOrder"), t("colSeller"), t("colCustomer"),
+    t("colCity"), t("colProduct"), t("colStatus"), t("colDate"),
   ];
 
   return (
@@ -194,21 +213,21 @@ export default function AdminDashboardPage() {
         <div className="card card-primary p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-bold text-[#1E293B] text-sm">الطلبات — آخر 7 أيام</h3>
-              <p className="text-xs text-[#94A3B8] mt-0.5">01–07 يونيو 2026</p>
+              <h3 className="font-bold text-[#1E293B] text-sm">{t("weekChart")}</h3>
+              <p className="text-xs text-[#94A3B8] mt-0.5">{weekDateRange}</p>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-2.5 h-2.5 rounded-sm" style={{ background: "#4361EE" }} />
-              <span className="text-xs text-[#64748B]">اليوم</span>
+              <span className="text-xs text-[#64748B]">{t("today")}</span>
               <div className="w-2.5 h-2.5 rounded-sm mr-2" style={{ background: "rgba(67,97,238,0.2)" }} />
-              <span className="text-xs text-[#64748B]">سابق</span>
+              <span className="text-xs text-[#64748B]">{t("previous")}</span>
             </div>
           </div>
-          <WeeklyBarChart />
+          <WeeklyBarChart data={weekData} />
           <div className="mt-3 pt-3 border-t border-[#F1F5F9] flex items-center justify-between">
-            <span className="text-xs text-[#64748B]">إجمالي الأسبوع</span>
+            <span className="text-xs text-[#64748B]">{t("weekTotal")}</span>
             <span className="text-sm font-bold text-[#1E293B]">
-              {WEEK_ORDERS.reduce((s, d) => s + d.orders, 0)} طلب
+              {weekCounts.reduce((s, n) => s + n, 0)} {t("orders")}
             </span>
           </div>
         </div>
@@ -217,8 +236,8 @@ export default function AdminDashboardPage() {
         <div className="card card-primary p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-bold text-[#1E293B] text-sm">أفضل 5 بائعين</h3>
-              <p className="text-xs text-[#94A3B8] mt-0.5">حسب عدد الطلبات الكلي</p>
+              <h3 className="font-bold text-[#1E293B] text-sm">{t("topSellers")}</h3>
+              <p className="text-xs text-[#94A3B8] mt-0.5">{t("byOrderCount")}</p>
             </div>
           </div>
           <TopSellersChart items={topSellers} />
@@ -229,15 +248,17 @@ export default function AdminDashboardPage() {
       <div className="card card-primary">
         <div className="p-5 border-b border-[#F1F5F9] flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-[#1E293B] text-sm">آخر النشاطات</h3>
-            <p className="text-xs text-[#94A3B8] mt-0.5">آخر {recentOrders.length} طلب من كل البائعين</p>
+            <h3 className="font-bold text-[#1E293B] text-sm">{t("recentActivity")}</h3>
+            <p className="text-xs text-[#94A3B8] mt-0.5">
+              {t("lastOrdersFrom", { count: recentOrders.length })}
+            </p>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[#F1F5F9]">
-                {["رقم الطلب", "البائع", "العميل", "المدينة", "المنتج", "الحالة", "التاريخ"].map((h) => (
+                {colHeaders.map((h) => (
                   <th key={h} className="py-3 px-4 text-right text-xs font-semibold text-[#94A3B8] whitespace-nowrap">
                     {h}
                   </th>

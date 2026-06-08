@@ -1,40 +1,42 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ChevronLeft, Bell } from "lucide-react";
 import type { MockSeller } from "@/lib/store";
 import Link from "next/link";
 
 interface Props { user: MockSeller }
 
-const BREADCRUMBS: Record<string, { label: string; parent?: string; parentHref?: string }> = {
-  "/admin":          { label: "لوحة القيادة" },
-  "/admin/sellers":  { label: "البائعون",      parent: "لوحة القيادة", parentHref: "/admin" },
-  "/admin/finance":  { label: "الماليات",       parent: "لوحة القيادة", parentHref: "/admin" },
-  "/admin/orders":   { label: "الطلبات",        parent: "لوحة القيادة", parentHref: "/admin" },
-  "/admin/products": { label: "المنتجات",       parent: "لوحة القيادة", parentHref: "/admin" },
-  "/admin/reports":  { label: "التقارير",       parent: "لوحة القيادة", parentHref: "/admin" },
-  "/admin/settings": { label: "الإعدادات",      parent: "لوحة القيادة", parentHref: "/admin" },
+const BREADCRUMB_KEYS: Record<string, { labelKey: string; parentKey?: string; parentHref?: string }> = {
+  "/admin":          { labelKey: "dashboard" },
+  "/admin/sellers":  { labelKey: "sellers",  parentKey: "dashboard", parentHref: "/admin" },
+  "/admin/finance":  { labelKey: "finance",  parentKey: "dashboard", parentHref: "/admin" },
+  "/admin/orders":   { labelKey: "orders",   parentKey: "dashboard", parentHref: "/admin" },
+  "/admin/products": { labelKey: "products", parentKey: "dashboard", parentHref: "/admin" },
+  "/admin/reports":  { labelKey: "reports",  parentKey: "dashboard", parentHref: "/admin" },
+  "/admin/settings": { labelKey: "settings", parentKey: "dashboard", parentHref: "/admin" },
 };
 
 export default function AdminHeader({ user }: Props) {
   const pathname = usePathname();
-  const meta = BREADCRUMBS[pathname] ?? { label: "الإدارة" };
+  const t = useTranslations("AdminHeader");
+  const meta = BREADCRUMB_KEYS[pathname] ?? { labelKey: "admin" };
 
   return (
     <header className="h-14 flex-shrink-0 flex items-center justify-between px-6 border-b border-[#E2E8F0]"
       style={{ background: "#FFFFFF" }}>
       {/* Left: breadcrumb */}
       <div className="flex items-center gap-1.5 text-sm">
-        {meta.parent && (
+        {meta.parentKey && (
           <>
             <Link href={meta.parentHref!} className="text-[#64748B] hover:text-[#4361EE] transition-colors">
-              {meta.parent}
+              {t(meta.parentKey as Parameters<typeof t>[0])}
             </Link>
             <ChevronLeft className="w-3.5 h-3.5 text-[#CBD5E1]" />
           </>
         )}
-        <span className="font-semibold text-[#1E293B]">{meta.label}</span>
+        <span className="font-semibold text-[#1E293B]">{t(meta.labelKey as Parameters<typeof t>[0])}</span>
       </div>
 
       {/* Right: notification + user */}

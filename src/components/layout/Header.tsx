@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useStore } from "@/lib/store";
 import { formatMAD } from "@/lib/utils";
 import Link from "next/link";
@@ -9,6 +10,7 @@ interface HeaderProps { title?: string; }
 
 export default function Header({ title }: HeaderProps) {
   const { getCurrentUser } = useStore();
+  const t = useTranslations("Nav");
   const user = getCurrentUser();
   if (!user) return null;
 
@@ -25,7 +27,7 @@ export default function Header({ title }: HeaderProps) {
             className="flex items-center gap-3 px-4 py-2 rounded-xl text-white text-sm hover:opacity-90 transition-all"
             style={{ background: "linear-gradient(135deg, #4361EE, #3254D4)" }}>
             <div className="text-right">
-              <p className="text-white/70 text-[10px] leading-none font-medium">رصيد المحفظة</p>
+              <p className="text-white/70 text-[10px] leading-none font-medium">{t("wallet")}</p>
               <p className="text-white font-bold text-base leading-tight">{formatMAD(user.walletBalance)}</p>
             </div>
           </Link>

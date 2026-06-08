@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { supabase } from "@/lib/supabase";
@@ -23,6 +24,7 @@ function deriveRole(email: string): string {
 
 export default function LoginPage() {
   const router = useRouter();
+  const t = useTranslations("Login");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading]   = useState(false);
   const [form, setForm]         = useState({ email: "", password: "" });
@@ -33,7 +35,6 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    // 1 — Supabase auth
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email:    form.email,
       password: form.password,
@@ -42,18 +43,16 @@ export default function LoginPage() {
     if (authError || !authData.user) {
       setLoading(false);
       console.error("[Login] Supabase auth error:", authError);
-      // Show specific message based on error type
       if (authError?.message?.toLowerCase().includes("email not confirmed")) {
-        setError("البريد الإلكتروني غير مؤكد — يرجى التحقق من بريدك الإلكتروني أو تواصل مع الإدارة.");
+        setError(t("errEmailUnconfirmed"));
       } else if (authError?.message?.toLowerCase().includes("invalid login credentials")) {
-        setError("البريد الإلكتروني أو كلمة المرور غير صحيحة.");
+        setError(t("errInvalid"));
       } else {
-        setError(authError?.message ?? "خطأ في تسجيل الدخول — حاول مرة أخرى.");
+        setError(t("errGeneric"));
       }
       return;
     }
 
-    // 2 — Fetch profile; auto-create it if missing (user exists in auth but not in public.users)
     let { data: profile, error: profileError } = await supabase
       .from("users")
       .select("role, status")
@@ -62,9 +61,9 @@ export default function LoginPage() {
 
     if (profileError || !profile) {
       console.warn("[Login] Profile missing — creating automatically for:", authData.user.email);
-      const email     = authData.user.email ?? "";
-      const role      = deriveRole(email);
-      const name      = email.split("@")[0];
+      const email = authData.user.email ?? "";
+      const role  = deriveRole(email);
+      const name  = email.split("@")[0];
 
       const { data: inserted, error: insertError } = await supabase
         .from("users")
@@ -83,11 +82,10 @@ export default function LoginPage() {
       if (insertError || !inserted) {
         setLoading(false);
         console.error("[Login] Auto-create profile failed:", insertError);
-        setError("خطأ في إنشاء بيانات المستخدم — تواصل مع الإدارة.");
+        setError(t("errProfile"));
         return;
       }
 
-      // Create an empty wallet for sellers
       if (role === "seller") {
         await supabase.from("wallets").insert({
           user_id:      authData.user.id,
@@ -103,14 +101,19 @@ export default function LoginPage() {
 
     if (profile.status !== "active") {
       await supabase.auth.signOut();
-      setError("هذا الحساب موقوف. تواصل مع الإدارة.");
+      setError(t("errBlocked"));
       return;
     }
 
-    // 3 — Redirect based on role
     const route = ROLE_ROUTES[profile.role] ?? "/seller";
     router.push(route);
   }
+
+  const panels = [
+    { title: t("panelF1Title"), desc: t("panelF1Desc") },
+    { title: t("panelF2Title"), desc: t("panelF2Desc") },
+    { title: t("panelF3Title"), desc: t("panelF3Desc") },
+  ];
 
   return (
     <div className="min-h-screen flex" style={{ background: "#F8FAFC" }}>
@@ -123,14 +126,10 @@ export default function LoginPage() {
           <h1 className="text-3xl font-black text-white tracking-wide">
             WinWin<span style={{ color: "#FB923C" }}>COD</span>
           </h1>
-          <p className="text-white/60 mt-2 text-sm">منصة الكود الاحترافية</p>
+          <p className="text-white/60 mt-2 text-sm">{t("panelTagline")}</p>
         </div>
         <div className="space-y-6">
-          {[
-            { title: "إدارة الطلبات", desc: "تتبع كل طلباتك بمعرفات فريدة ORD-XXXX" },
-            { title: "محفظة ذكية",   desc: "نظام خصم تلقائي عند تأكيد كل طلب" },
-            { title: "مركز اتصال",   desc: "تأكيد مباشر مع العملاء عبر واتساب" },
-          ].map((f) => (
+          {panels.map((f) => (
             <div key={f.title} className="flex gap-3">
               <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                 <div className="w-2 h-2 rounded-full" style={{ background: "#FB923C" }} />
@@ -154,8 +153,8 @@ export default function LoginPage() {
             </h1>
           </div>
 
-          <h2 className="text-2xl font-bold text-[#1E293B] mb-1">مرحباً بعودتك 👋</h2>
-          <p className="text-[#64748B] text-sm mb-6">سجل دخولك للوصول إلى لوحة التحكم</p>
+          <h2 className="text-2xl font-bold text-[#1E293B] mb-1">{t("title")}</h2>
+          <p className="text-[#64748B] text-sm mb-6">{t("subtitle")}</p>
 
           {error && (
             <div className="mb-4 p-3 rounded-lg bg-[#FEF2F2] border border-[#FECACA] text-[#DC2626] text-sm">
@@ -167,7 +166,7 @@ export default function LoginPage() {
             <Input
               id="email"
               type="email"
-              label="البريد الإلكتروني"
+              label={t("email")}
               placeholder="example@gmail.com"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -178,7 +177,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type={showPass ? "text" : "password"}
-                label="كلمة المرور"
+                label={t("password")}
                 placeholder="••••••••"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -194,14 +193,14 @@ export default function LoginPage() {
             </div>
 
             <Button type="submit" variant="primary" size="lg" loading={loading} className="w-full mt-1">
-              تسجيل الدخول
+              {t("submit")}
             </Button>
           </form>
 
           <p className="text-center mt-5 text-sm text-[#64748B]">
-            ليس لديك حساب؟{" "}
+            {t("noAccount")}{" "}
             <Link href="/register" className="font-semibold hover:underline" style={{ color: "#4361EE" }}>
-              إنشاء حساب جديد
+              {t("registerLink")}
             </Link>
           </p>
         </div>

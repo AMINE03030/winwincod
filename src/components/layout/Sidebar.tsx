@@ -2,31 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import {
   LayoutDashboard, ShoppingCart, Package, Wallet, Phone,
   Settings, LogOut, ShieldCheck, BarChart3, Users,
 } from "lucide-react";
-
-const sellerNav = [
-  { href: "/seller",           icon: LayoutDashboard, label: "لوحة القيادة" },
-  { href: "/seller/orders",    icon: ShoppingCart,    label: "طلباتي" },
-  { href: "/seller/products",  icon: Package,         label: "المنتجات" },
-  { href: "/seller/wallet",    icon: Wallet,          label: "المحفظة" },
-];
-
-const callCenterNav = [
-  { href: "/call-center",       icon: Phone,      label: "قائمة الانتظار" },
-  { href: "/call-center/stats", icon: BarChart3,  label: "الإحصائيات" },
-];
-
-const adminNav = [
-  { href: "/admin",           icon: ShieldCheck,     label: "لوحة المراقبة" },
-  { href: "/admin/sellers",   icon: Users,           label: "البائعون" },
-  { href: "/admin/deposits",  icon: Wallet,          label: "الإيداعات" },
-  { href: "/admin/products",  icon: Package,         label: "المنتجات" },
-];
 
 interface SidebarProps { role?: "SELLER" | "CALL_CENTER" | "ADMIN"; }
 
@@ -34,6 +17,26 @@ export default function Sidebar({ role = "SELLER" }: SidebarProps) {
   const pathname = usePathname();
   const router   = useRouter();
   const { logout } = useStore();
+  const t = useTranslations("Nav");
+
+  const sellerNav = [
+    { href: "/seller",           icon: LayoutDashboard, label: t("dashboard") },
+    { href: "/seller/orders",    icon: ShoppingCart,    label: t("myOrders") },
+    { href: "/seller/products",  icon: Package,         label: t("products") },
+    { href: "/seller/wallet",    icon: Wallet,          label: t("wallet") },
+  ];
+
+  const callCenterNav = [
+    { href: "/call-center",       icon: Phone,      label: t("callQueue") },
+    { href: "/call-center/stats", icon: BarChart3,  label: t("stats") },
+  ];
+
+  const adminNav = [
+    { href: "/admin",           icon: ShieldCheck,     label: t("adminDashboard") },
+    { href: "/admin/sellers",   icon: Users,           label: t("sellers") },
+    { href: "/admin/deposits",  icon: Wallet,          label: t("deposits") },
+    { href: "/admin/products",  icon: Package,         label: t("products") },
+  ];
 
   const navItems =
     role === "ADMIN" ? adminNav :
@@ -53,7 +56,7 @@ export default function Sidebar({ role = "SELLER" }: SidebarProps) {
           <span className="text-white">WinWin</span>
           <span style={{ color: "#FB923C" }}>COD</span>
         </h1>
-        <p className="text-white/50 text-[10px] mt-0.5 font-light">منصة الكود الاحترافية</p>
+        <p className="text-white/50 text-[10px] mt-0.5 font-light">{t("platformSubtitle")}</p>
       </div>
 
       {/* Nav */}
@@ -80,15 +83,18 @@ export default function Sidebar({ role = "SELLER" }: SidebarProps) {
 
       {/* Bottom */}
       <div className="px-3 py-4 border-t border-white/10 space-y-0.5">
+        <div className="px-3 py-2">
+          <LanguageSwitcher />
+        </div>
         <Link href="/settings"
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/10 transition-all">
           <Settings className="w-4 h-4" />
-          الإعدادات
+          {t("settings")}
         </Link>
         <button onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-300 hover:bg-white/10 hover:text-red-200 transition-all">
           <LogOut className="w-4 h-4" />
-          تسجيل الخروج
+          {t("logout")}
         </button>
       </div>
     </aside>

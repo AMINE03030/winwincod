@@ -2,22 +2,15 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import type { MockSeller } from "@/lib/store";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import {
   LayoutDashboard, Users, Wallet, ClipboardList,
   Package, BarChart3, Settings, LogOut,
 } from "lucide-react";
-
-const NAV_ITEMS = [
-  { href: "/admin",          icon: LayoutDashboard, label: "لوحة القيادة" },
-  { href: "/admin/sellers",  icon: Users,           label: "البائعون" },
-  { href: "/admin/finance",  icon: Wallet,          label: "الماليات" },
-  { href: "/admin/orders",   icon: ClipboardList,   label: "الطلبات" },
-  { href: "/admin/products", icon: Package,         label: "المنتجات" },
-  { href: "/admin/reports",  icon: BarChart3,       label: "التقارير" },
-];
 
 interface Props { user: MockSeller }
 
@@ -25,6 +18,16 @@ export default function AdminSidebar({ user }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useStore();
+  const t = useTranslations("Nav");
+
+  const navItems = [
+    { href: "/admin",          icon: LayoutDashboard, label: t("adminDashboard") },
+    { href: "/admin/sellers",  icon: Users,           label: t("sellers") },
+    { href: "/admin/finance",  icon: Wallet,          label: t("finance") },
+    { href: "/admin/orders",   icon: ClipboardList,   label: t("orders") },
+    { href: "/admin/products", icon: Package,         label: t("products") },
+    { href: "/admin/reports",  icon: BarChart3,       label: t("reports") },
+  ];
 
   function handleLogout() {
     logout();
@@ -44,7 +47,7 @@ export default function AdminSidebar({ user }: Props) {
           <span className="text-white">WinWin</span>
           <span style={{ color: "#FB923C" }}>COD</span>
         </h1>
-        <p className="text-white/50 text-[10px] mt-0.5 font-light">لوحة الإدارة</p>
+        <p className="text-white/50 text-[10px] mt-0.5 font-light">{t("adminPanelLabel")}</p>
       </div>
 
       {/* Admin badge */}
@@ -56,14 +59,14 @@ export default function AdminSidebar({ user }: Props) {
           </div>
           <div className="min-w-0">
             <p className="text-white text-xs font-semibold truncate">{user.name}</p>
-            <p className="text-white/40 text-[9px]">مدير النظام</p>
+            <p className="text-white/40 text-[9px]">{t("sysAdmin")}</p>
           </div>
         </div>
       </div>
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-2 space-y-0.5">
-        {NAV_ITEMS.map(({ href, icon: Icon, label }) => (
+        {navItems.map(({ href, icon: Icon, label }) => (
           <Link
             key={href}
             href={href}
@@ -82,15 +85,18 @@ export default function AdminSidebar({ user }: Props) {
 
       {/* Bottom */}
       <div className="px-3 py-4 border-t border-white/10 space-y-0.5">
+        <div className="px-3 py-2">
+          <LanguageSwitcher />
+        </div>
         <Link href="/admin/settings"
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/10 transition-all">
           <Settings className="w-4 h-4" />
-          الإعدادات
+          {t("settings")}
         </Link>
         <button onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-300 hover:bg-white/10 hover:text-red-200 transition-all">
           <LogOut className="w-4 h-4" />
-          تسجيل الخروج
+          {t("logout")}
         </button>
       </div>
     </aside>
