@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 import { useStore } from "@/lib/store";
 import type { MockSeller } from "@/lib/store";
 import { formatMAD } from "@/lib/utils";
@@ -21,6 +22,7 @@ function SellerSlideOver({
   seller: MockSeller;
   onClose: () => void;
 }) {
+  const t = useTranslations("AdminSellers");
   const { orders, transactions, blockSeller, unblockSeller, adjustBalance } = useStore();
   const [adjustMode, setAdjustMode] = useState(false);
   const [amount, setAmount] = useState("");
@@ -29,7 +31,7 @@ function SellerSlideOver({
 
   const sellerOrders = orders.filter((o) => o.sellerId === seller.sellerId);
   const sellerTxs = transactions
-    .filter((t) => t.sellerId === seller.sellerId)
+    .filter((tx) => tx.sellerId === seller.sellerId)
     .slice()
     .reverse()
     .slice(0, 5);
@@ -37,17 +39,25 @@ function SellerSlideOver({
   const delivered = sellerOrders.filter((o) => o.status === "DELIVERED").length;
   const deliveryRate = sellerOrders.length > 0 ? Math.round((delivered / sellerOrders.length) * 100) : 0;
 
+  const txTypeLabel: Record<string, string> = {
+    DEPOSIT: t("txDeposit"), DEDUCTION: t("txDeduction"),
+    PAYOUT: t("txPayout"),   REFUND: t("txRefund"),
+  };
+  const txTypeColor: Record<string, string> = {
+    DEPOSIT: "#16A34A", DEDUCTION: "#DC2626", PAYOUT: "#FB923C", REFUND: "#4361EE",
+  };
+
   async function handleBlock() {
     setLoading(true);
     await new Promise((r) => setTimeout(r, 500));
     seller.blocked ? unblockSeller(seller.sellerId) : blockSeller(seller.sellerId);
     setLoading(false);
-    toast.success(seller.blocked ? "تم تفعيل الحساب" : "تم إيقاف الحساب");
+    toast.success(seller.blocked ? t("toastActivated") : t("toastSuspended"));
   }
 
   async function handleAdjust() {
     const val = parseFloat(amount);
-    if (isNaN(val) || val === 0) { toast.error("أدخل مبلغاً صحيحاً"); return; }
+    if (isNaN(val) || val === 0) { toast.error(t("toastInvalidAmount")); return; }
     setLoading(true);
     await new Promise((r) => setTimeout(r, 500));
     adjustBalance(seller.sellerId, val, desc || undefined!);
@@ -55,15 +65,10 @@ function SellerSlideOver({
     setAdjustMode(false);
     setAmount("");
     setDesc("");
-    toast.success(val > 0 ? `تم إضافة ${formatMAD(val)} للمحفظة` : `تم خصم ${formatMAD(Math.abs(val))}`);
+    toast.success(val > 0
+      ? t("toastAddedAmount", { amount: formatMAD(val) })
+      : t("toastDeductedAmount", { amount: formatMAD(Math.abs(val)) }));
   }
-
-  const txTypeLabel: Record<string, string> = {
-    DEPOSIT: "إيداع", DEDUCTION: "خصم", PAYOUT: "صرف", REFUND: "استرداد",
-  };
-  const txTypeColor: Record<string, string> = {
-    DEPOSIT: "#16A34A", DEDUCTION: "#DC2626", PAYOUT: "#FB923C", REFUND: "#4361EE",
-  };
 
   return (
     <>
@@ -97,7 +102,7 @@ function SellerSlideOver({
                 ? "bg-[#FEF2F2] text-[#DC2626] border-[#FECACA]"
                 : "bg-[#F0FDF4] text-[#16A34A] border-[#BBF7D0]"
             }`}>
-              {seller.blocked ? "موقوف" : "نشط"}
+              {seller.blocked ? t("filterBlocked") : t("filterActive")}
             </span>
             <button onClick={onClose}
               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#E2E8F0] transition-colors text-[#64748B]">
@@ -111,9 +116,9 @@ function SellerSlideOver({
           {/* Stats row */}
           <div className="grid grid-cols-3 divide-x divide-x-reverse divide-[#E2E8F0] border-b border-[#E2E8F0]">
             {[
-              { icon: Wallet,       label: "الرصيد",     value: formatMAD(seller.walletBalance), color: "#4361EE" },
-              { icon: ShoppingCart, label: "الطلبات",    value: String(sellerOrders.length),     color: "#C2410C" },
-              { icon: TrendingUp,   label: "التسليم",    value: `${deliveryRate}%`,              color: "#16A34A" },
+              { icon: Wallet,       label: t("balance"),       value: formatMAD(seller.walletBalance), color: "#4361EE" },
+              { icon: ShoppingCart, label: t("ordersLabel"),   value: String(sellerOrders.length),     color: "#C2410C" },
+              { icon: TrendingUp,   label: t("deliveryLabel"), value: `${deliveryRate}%`,              color: "#16A34A" },
             ].map(({ icon: Icon, label, value, color }) => (
               <div key={label} className="flex flex-col items-center py-4 px-2 gap-1">
                 <Icon className="w-4 h-4" style={{ color }} />
@@ -126,18 +131,18 @@ function SellerSlideOver({
           <div className="p-5 space-y-5">
             {/* Contact info */}
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wide">معلومات الاتصال</p>
+              <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wide">{t("contactInfo")}</p>
               <div className="p-3 rounded-xl border border-[#E2E8F0] space-y-1.5 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-[#64748B]">البريد</span>
+                  <span className="text-[#64748B]">{t("email")}</span>
                   <span className="font-medium text-[#1E293B]">{seller.email}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#64748B]">الهاتف</span>
+                  <span className="text-[#64748B]">{t("phone")}</span>
                   <span className="font-mono font-medium text-[#1E293B]">{seller.phone}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#64748B]">تاريخ التسجيل</span>
+                  <span className="text-[#64748B]">{t("joinDate")}</span>
                   <span className="font-medium text-[#1E293B]">{seller.createdAt}</span>
                 </div>
               </div>
@@ -145,9 +150,9 @@ function SellerSlideOver({
 
             {/* Last 5 orders */}
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wide">آخر 5 طلبات</p>
+              <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wide">{t("lastOrders")}</p>
               {lastFiveOrders.length === 0 ? (
-                <p className="text-xs text-[#94A3B8] text-center py-4">لا توجد طلبات بعد</p>
+                <p className="text-xs text-[#94A3B8] text-center py-4">{t("noOrdersYet")}</p>
               ) : (
                 <div className="space-y-1.5">
                   {lastFiveOrders.map((o) => (
@@ -167,24 +172,24 @@ function SellerSlideOver({
 
             {/* Last 5 transactions */}
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wide">آخر 5 معاملات</p>
+              <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wide">{t("lastTxs")}</p>
               {sellerTxs.length === 0 ? (
-                <p className="text-xs text-[#94A3B8] text-center py-4">لا توجد معاملات بعد</p>
+                <p className="text-xs text-[#94A3B8] text-center py-4">{t("noTxsYet")}</p>
               ) : (
                 <div className="space-y-1.5">
-                  {sellerTxs.map((t) => (
-                    <div key={t.transactionId}
+                  {sellerTxs.map((tx) => (
+                    <div key={tx.transactionId}
                       className="flex items-center justify-between p-2.5 rounded-lg border border-[#F1F5F9]">
                       <div>
-                        <p className="font-mono text-[10px] font-bold text-[#64748B]">{t.transactionId}</p>
-                        <p className="text-xs text-[#64748B]">{t.description}</p>
-                        <p className="text-[10px] text-[#94A3B8]">{t.createdAt.slice(0, 10)}</p>
+                        <p className="font-mono text-[10px] font-bold text-[#64748B]">{tx.transactionId}</p>
+                        <p className="text-xs text-[#64748B]">{tx.description}</p>
+                        <p className="text-[10px] text-[#94A3B8]">{tx.createdAt.slice(0, 10)}</p>
                       </div>
                       <div className="text-left">
-                        <p className="text-sm font-bold" style={{ color: txTypeColor[t.type] }}>
-                          {t.type === "DEDUCTION" ? "-" : "+"}{formatMAD(t.amount)}
+                        <p className="text-sm font-bold" style={{ color: txTypeColor[tx.type] }}>
+                          {tx.type === "DEDUCTION" ? "-" : "+"}{formatMAD(tx.amount)}
                         </p>
-                        <p className="text-[10px] text-[#94A3B8]">{txTypeLabel[t.type]}</p>
+                        <p className="text-[10px] text-[#94A3B8]">{txTypeLabel[tx.type]}</p>
                       </div>
                     </div>
                   ))}
@@ -194,14 +199,14 @@ function SellerSlideOver({
 
             {/* Balance adjust */}
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wide">تعديل الرصيد</p>
+              <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wide">{t("adjustBalance")}</p>
               {!adjustMode ? (
                 <button
                   onClick={() => setAdjustMode(true)}
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all hover:opacity-90"
                   style={{ borderColor: "#FB923C", color: "#FB923C", background: "#FFF7ED" }}>
                   <CircleDollarSign className="w-4 h-4" />
-                  تعديل رصيد المحفظة
+                  {t("adjustWallet")}
                 </button>
               ) : (
                 <div className="p-3 rounded-xl border border-[#E2E8F0] space-y-2.5">
@@ -210,18 +215,18 @@ function SellerSlideOver({
                       onClick={() => setAmount((v) => (parseFloat(v) > 0 ? String(parseFloat(v)) : "100"))}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold border-2 flex items-center gap-1 transition-all"
                       style={{ borderColor: "#16A34A", color: "#16A34A", background: "#F0FDF4" }}>
-                      <CheckCircle2 className="w-3 h-3" /> إضافة
+                      <CheckCircle2 className="w-3 h-3" /> {t("add")}
                     </button>
                     <button
                       onClick={() => setAmount((v) => (parseFloat(v) > 0 ? String(-parseFloat(v)) : "-100"))}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold border-2 flex items-center gap-1 transition-all"
                       style={{ borderColor: "#DC2626", color: "#DC2626", background: "#FEF2F2" }}>
-                      <XCircle className="w-3 h-3" /> خصم
+                      <XCircle className="w-3 h-3" /> {t("deduct")}
                     </button>
                   </div>
                   <input
                     type="number"
-                    placeholder="المبلغ (موجب = إضافة، سالب = خصم)"
+                    placeholder={t("amountPlaceholder")}
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-[#E2E8F0] text-sm text-[#1E293B] focus:outline-none focus:ring-2"
@@ -229,7 +234,7 @@ function SellerSlideOver({
                   />
                   <input
                     type="text"
-                    placeholder="سبب التعديل (اختياري)"
+                    placeholder={t("reasonPlaceholder")}
                     value={desc}
                     onChange={(e) => setDesc(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-[#E2E8F0] text-sm text-[#1E293B] focus:outline-none focus:ring-2"
@@ -241,12 +246,12 @@ function SellerSlideOver({
                       disabled={loading}
                       className="flex-1 py-2 rounded-lg text-sm font-bold text-white transition-all disabled:opacity-50"
                       style={{ background: "#4361EE" }}>
-                      {loading ? "جاري..." : "تطبيق"}
+                      {loading ? t("applying") : t("applyBtn")}
                     </button>
                     <button
                       onClick={() => { setAdjustMode(false); setAmount(""); setDesc(""); }}
                       className="px-4 py-2 rounded-lg text-sm font-semibold text-[#64748B] border border-[#E2E8F0] hover:bg-[#F8FAFC] transition-all">
-                      إلغاء
+                      {t("cancelBtn")}
                     </button>
                   </div>
                 </div>
@@ -267,7 +272,7 @@ function SellerSlideOver({
                 : { borderColor: "#DC2626", color: "#DC2626", background: "#FEF2F2" }
             }>
             {seller.blocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-            {seller.blocked ? "تفعيل الحساب" : "إيقاف الحساب"}
+            {seller.blocked ? t("activate") : t("suspend")}
           </button>
         </div>
       </div>
@@ -279,17 +284,23 @@ function SellerSlideOver({
 
 type FilterType = "all" | "active" | "blocked";
 
-const FILTER_LABELS: Record<FilterType, string> = {
-  all: "الكل", active: "نشط", blocked: "موقوف",
-};
-
 export default function AdminSellersPage() {
+  const t = useTranslations("AdminSellers");
   const { sellers, orders } = useStore();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterType>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const sellerList = sellers.filter((s) => s.role === "SELLER");
+
+  const FILTER_LABELS: Record<FilterType, string> = {
+    all: t("filterAll"), active: t("filterActive"), blocked: t("filterBlocked"),
+  };
+
+  const colHeaders = [
+    t("colSeller"), t("colId"), t("colBalance"),
+    t("colOrders"), t("colDelivery"), t("colStatus"), t("colActions"),
+  ];
 
   const filtered = useMemo(() => {
     return sellerList.filter((s) => {
@@ -323,7 +334,7 @@ export default function AdminSellersPage() {
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
           <input
             type="text"
-            placeholder="بحث بالاسم، البريد، أو ID..."
+            placeholder={t("searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pr-9 pl-3 py-2 rounded-xl border border-[#E2E8F0] text-sm text-[#1E293B] focus:outline-none focus:ring-2 focus:ring-[#4361EE]/30 focus:border-[#4361EE] bg-white"
@@ -354,7 +365,7 @@ export default function AdminSellersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[#F1F5F9]" style={{ background: "#F8FAFC" }}>
-                {["البائع", "المعرّف", "الرصيد", "الطلبات", "التسليم", "الحالة", "إجراءات"].map((h) => (
+                {colHeaders.map((h) => (
                   <th key={h} className="py-3 px-4 text-right text-xs font-semibold text-[#94A3B8] whitespace-nowrap">
                     {h}
                   </th>
@@ -381,19 +392,15 @@ export default function AdminSellersPage() {
                         </div>
                       </div>
                     </td>
-                    {/* ID */}
                     <td className="py-3 px-4 font-mono text-xs font-bold" style={{ color: "#4361EE" }}>
                       {s.sellerId}
                     </td>
-                    {/* Wallet */}
                     <td className="py-3 px-4 font-bold text-sm" style={{ color: "#FB923C" }}>
                       {formatMAD(s.walletBalance)}
                     </td>
-                    {/* Orders count */}
                     <td className="py-3 px-4 text-[#1E293B] font-semibold text-center">
                       {sellerOrders.length}
                     </td>
-                    {/* Delivery rate */}
                     <td className="py-3 px-4">
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                         rate >= 60 ? "bg-[#F0FDF4] text-[#16A34A]" : "bg-[#FEF2F2] text-[#DC2626]"
@@ -401,33 +408,28 @@ export default function AdminSellersPage() {
                         {rate}%
                       </span>
                     </td>
-                    {/* Status */}
                     <td className="py-3 px-4">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                         s.blocked
                           ? "bg-[#FEF2F2] text-[#DC2626] border-[#FECACA]"
                           : "bg-[#F0FDF4] text-[#16A34A] border-[#BBF7D0]"
                       }`}>
-                        {s.blocked ? "موقوف" : "نشط"}
+                        {s.blocked ? t("filterBlocked") : t("filterActive")}
                       </span>
                     </td>
-                    {/* Actions */}
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => setSelectedId(s.sellerId)}
-                          title="عرض التفاصيل"
                           className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#E2E8F0] text-[#64748B] hover:text-[#4361EE] hover:border-[#4361EE] hover:bg-[#EEF2FF] transition-all">
                           <Eye className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          title={s.blocked ? "تفعيل" : "إيقاف"}
                           onClick={() => setSelectedId(s.sellerId)}
                           className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#E2E8F0] text-[#64748B] hover:text-[#DC2626] hover:border-[#DC2626] hover:bg-[#FEF2F2] transition-all">
                           {s.blocked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                         </button>
                         <button
-                          title="تعديل الرصيد"
                           onClick={() => setSelectedId(s.sellerId)}
                           className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#E2E8F0] text-[#64748B] hover:text-[#FB923C] hover:border-[#FB923C] hover:bg-[#FFF7ED] transition-all">
                           <CircleDollarSign className="w-3.5 h-3.5" />
@@ -440,7 +442,7 @@ export default function AdminSellersPage() {
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-sm text-[#94A3B8]">
-                    لا توجد نتائج مطابقة
+                    {t("noResults")}
                   </td>
                 </tr>
               )}
@@ -452,7 +454,7 @@ export default function AdminSellersPage() {
         <div className="px-5 py-3 border-t border-[#F1F5F9] flex items-center justify-between"
           style={{ background: "#F8FAFC" }}>
           <p className="text-xs text-[#64748B]">
-            {filtered.length} من {sellerList.length} بائع
+            {filtered.length} {t("from")} {sellerList.length} {t("seller")}
           </p>
           <div className="flex items-center gap-1">
             <button className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#E2E8F0] text-[#64748B] hover:bg-white transition-all disabled:opacity-30" disabled>

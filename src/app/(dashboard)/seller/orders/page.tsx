@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useStore } from "@/lib/store";
 import Header from "@/components/layout/Header";
 import { Card } from "@/components/ui/Card";
@@ -9,38 +10,45 @@ import type { OrderStatus } from "@/lib/store";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
-const FILTERS: { label: string; value: OrderStatus | "ALL" }[] = [
-  { label: "الكل",          value: "ALL" },
-  { label: "رصيد ناقص",    value: "PENDING_BALANCE" },
-  { label: "انتظار تأكيد", value: "PENDING_CONFIRM" },
-  { label: "جاهز للشحن",   value: "READY_TO_SHIP" },
-  { label: "تم التسليم",    value: "DELIVERED" },
-  { label: "ملغي",          value: "CANCELLED" },
-];
-
 export default function OrdersPage() {
+  const t = useTranslations("SellerOrders");
   const { getCurrentUser, getSellerOrders } = useStore();
-  const user   = getCurrentUser();
+  const user = getCurrentUser();
   const [filter, setFilter] = useState<OrderStatus | "ALL">("ALL");
   if (!user) return null;
 
-  const all    = getSellerOrders(user.sellerId);
-  const shown  = [...(filter === "ALL" ? all : all.filter((o) => o.status === filter))].reverse();
+  const all   = getSellerOrders(user.sellerId);
+  const shown = [...(filter === "ALL" ? all : all.filter((o) => o.status === filter))].reverse();
+
+  const FILTERS: { label: string; value: OrderStatus | "ALL" }[] = [
+    { label: t("filterAll"),            value: "ALL" },
+    { label: t("filterPendingBalance"), value: "PENDING_BALANCE" },
+    { label: t("filterPendingConfirm"), value: "PENDING_CONFIRM" },
+    { label: t("filterReadyToShip"),    value: "READY_TO_SHIP" },
+    { label: t("filterDelivered"),      value: "DELIVERED" },
+    { label: t("filterCancelled"),      value: "CANCELLED" },
+  ];
+
+  const colHeaders = [
+    t("colOrder"), t("colCustomer"), t("colPhone"),
+    t("colCity"), t("colProduct"), t("colQty"),
+    t("colCost"), t("colStatus"), t("colDate"),
+  ];
 
   return (
     <div className="flex flex-col min-h-full bg-[#F8FAFC]">
-      <Header title="طلباتي" />
+      <Header title={t("headerTitle")} />
 
       <div className="flex-1 p-6 space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-[#1E293B]">إدارة الطلبات</h2>
-            <p className="text-[#64748B] text-sm">{all.length} طلب إجمالاً</p>
+            <h2 className="text-xl font-bold text-[#1E293B]">{t("heading")}</h2>
+            <p className="text-[#64748B] text-sm">{all.length} {t("total")}</p>
           </div>
           <Link href="/seller/orders/new"
             className="flex items-center gap-2 text-white px-5 py-2 rounded-xl font-bold text-sm transition-all"
             style={{ background: "#4361EE" }}>
-            <Plus className="w-4 h-4" /> إضافة طلب
+            <Plus className="w-4 h-4" /> {t("addOrder")}
           </Link>
         </div>
 
@@ -65,13 +73,13 @@ export default function OrdersPage() {
 
         <Card noPad>
           {shown.length === 0 ? (
-            <p className="text-center text-[#94A3B8] py-12 text-sm">لا توجد طلبات في هذه الفئة</p>
+            <p className="text-center text-[#94A3B8] py-12 text-sm">{t("noOrders")}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[#F1F5F9]">
-                    {["رقم الطلب", "العميل", "الهاتف", "المدينة", "المنتج", "الكمية", "التكلفة", "الحالة", "التاريخ"].map((h) => (
+                    {colHeaders.map((h) => (
                       <th key={h} className="py-3 px-4 text-right text-xs font-semibold text-[#94A3B8]">{h}</th>
                     ))}
                   </tr>

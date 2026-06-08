@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 import { useStore } from "@/lib/store";
 import type { MockProduct } from "@/lib/store";
 import { formatMAD } from "@/lib/utils";
@@ -14,13 +15,13 @@ import {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getProductIcon(title: string): React.ElementType {
-  const t = title.toLowerCase();
-  if (t.includes("montre") || t.includes("watch")) return Watch;
-  if (t.includes("écouteur") || t.includes("bluetooth") || t.includes("audio")) return Headphones;
-  if (t.includes("robot") || t.includes("cuisine")) return Utensils;
-  if (t.includes("lampe") || t.includes("led") || t.includes("lumière")) return Lightbulb;
-  if (t.includes("sac") || t.includes("bag") || t.includes("backpack")) return ShoppingBag;
-  if (t.includes("crème") || t.includes("soin") || t.includes("argan")) return Sparkles;
+  const tl = title.toLowerCase();
+  if (tl.includes("montre") || tl.includes("watch") || tl.includes("ساعة")) return Watch;
+  if (tl.includes("écouteur") || tl.includes("bluetooth") || tl.includes("audio") || tl.includes("سماعة")) return Headphones;
+  if (tl.includes("robot") || tl.includes("cuisine") || tl.includes("طبخ")) return Utensils;
+  if (tl.includes("lampe") || tl.includes("led") || tl.includes("lumière") || tl.includes("مصباح")) return Lightbulb;
+  if (tl.includes("sac") || tl.includes("bag") || tl.includes("backpack") || tl.includes("حقيبة")) return ShoppingBag;
+  if (tl.includes("crème") || tl.includes("soin") || tl.includes("argan") || tl.includes("كريم")) return Sparkles;
   return Package;
 }
 
@@ -39,13 +40,18 @@ function margin(sourcing: number, selling: number) {
 
 // ── Toggle Switch ─────────────────────────────────────────────────────────────
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+function Toggle({ checked, onChange, activeLabel, inactiveLabel }: {
+  checked: boolean;
+  onChange: () => void;
+  activeLabel: string;
+  inactiveLabel: string;
+}) {
   return (
     <button
       onClick={onChange}
       className="relative w-10 h-5 rounded-full transition-colors duration-300 flex-shrink-0"
       style={{ background: checked ? "#4361EE" : "#CBD5E1" }}
-      aria-label={checked ? "Désactiver" : "Activer"}
+      aria-label={checked ? activeLabel : inactiveLabel}
     >
       <span
         className="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300"
@@ -78,6 +84,7 @@ function ProductModal({
   initial?: MockProduct;
   onClose: () => void;
 }) {
+  const t = useTranslations("AdminProducts");
   const { addProduct, updateProduct } = useStore();
   const [form, setForm] = useState<FormState>(
     initial
@@ -107,23 +114,23 @@ function ProductModal({
     const sellingPrice = parseFloat(form.sellingPrice);
     const stockQuantity = parseInt(form.stockQuantity, 10);
 
-    if (!title) { toast.error("Le nom du produit est requis"); return; }
-    if (isNaN(sourcingPrice) || sourcingPrice <= 0) { toast.error("Prix d'achat invalide"); return; }
+    if (!title) { toast.error(t("errNameRequired")); return; }
+    if (isNaN(sourcingPrice) || sourcingPrice <= 0) { toast.error(t("errInvalidSourcePrice")); return; }
     if (isNaN(sellingPrice) || sellingPrice <= sourcingPrice) {
-      toast.error("Le prix de vente doit être supérieur au prix d'achat");
+      toast.error(t("errSellingMustBeHigher"));
       return;
     }
-    if (isNaN(stockQuantity) || stockQuantity < 0) { toast.error("Stock invalide"); return; }
+    if (isNaN(stockQuantity) || stockQuantity < 0) { toast.error(t("errInvalidStock")); return; }
 
     setLoading(true);
     await new Promise((r) => setTimeout(r, 600));
 
     if (mode === "add") {
       addProduct({ title, description: form.description.trim() || undefined, sourcingPrice, sellingPrice, stockQuantity });
-      toast.success(`Produit "${title}" ajouté avec succès`);
+      toast.success(t("toastAdded", { title }));
     } else if (initial) {
       updateProduct(initial.productId, { title, description: form.description.trim() || undefined, sourcingPrice, sellingPrice, stockQuantity });
-      toast.success(`Produit "${title}" mis à jour`);
+      toast.success(t("toastUpdated", { title }));
     }
     setLoading(false);
     onClose();
@@ -147,7 +154,7 @@ function ProductModal({
           style={{ background: "linear-gradient(135deg, #4361EE 0%, #3254D4 100%)" }}>
           <div>
             <h2 className="text-base font-bold text-white">
-              {mode === "add" ? "Ajouter un produit" : "Modifier le produit"}
+              {mode === "add" ? t("modalAddTitle") : t("modalEditTitle")}
             </h2>
             {mode === "edit" && initial && (
               <p className="text-white/70 text-xs mt-0.5 font-mono">{initial.productId}</p>
@@ -164,11 +171,11 @@ function ProductModal({
           {/* Name */}
           <div>
             <label className="block text-xs font-semibold text-[#64748B] mb-1.5">
-              Nom du produit <span className="text-[#DC2626]">*</span>
+              {t("productName")} <span className="text-[#DC2626]">*</span>
             </label>
             <input
               className={inputClass}
-              placeholder="ex: Montre connectée Pro"
+              placeholder={t("productNamePlaceholder")}
               value={form.title}
               onChange={(e) => set("title", e.target.value)}
             />
@@ -177,12 +184,12 @@ function ProductModal({
           {/* Description */}
           <div>
             <label className="block text-xs font-semibold text-[#64748B] mb-1.5">
-              Description <span className="text-[#94A3B8]">(optionnel)</span>
+              {t("description")} <span className="text-[#94A3B8]">{t("optional")}</span>
             </label>
             <textarea
               className={inputClass + " resize-none"}
               rows={2}
-              placeholder="Description courte du produit..."
+              placeholder={t("descPlaceholder")}
               value={form.description}
               onChange={(e) => set("description", e.target.value)}
             />
@@ -192,28 +199,22 @@ function ProductModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-[#64748B] mb-1.5">
-                Prix d'achat (MAD) <span className="text-[#DC2626]">*</span>
+                {t("sourcingPriceLabel")} <span className="text-[#DC2626]">*</span>
               </label>
               <input
-                type="number"
-                min="1"
-                step="0.01"
-                className={inputClass}
-                placeholder="120"
+                type="number" min="1" step="0.01"
+                className={inputClass} placeholder="120"
                 value={form.sourcingPrice}
                 onChange={(e) => set("sourcingPrice", e.target.value)}
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-[#64748B] mb-1.5">
-                Prix de vente (MAD) <span className="text-[#DC2626]">*</span>
+                {t("sellingPriceLabel")} <span className="text-[#DC2626]">*</span>
               </label>
               <input
-                type="number"
-                min="1"
-                step="0.01"
-                className={inputClass}
-                placeholder="299"
+                type="number" min="1" step="0.01"
+                className={inputClass} placeholder="299"
                 value={form.sellingPrice}
                 onChange={(e) => set("sellingPrice", e.target.value)}
               />
@@ -226,7 +227,7 @@ function ProductModal({
               style={{ background: "#F0FDF4", borderColor: "#BBF7D0" }}>
               <TrendingUp className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#16A34A" }} />
               <span className="text-xs font-semibold" style={{ color: "#16A34A" }}>
-                Marge estimée : {previewMargin}% — Bénéfice : {formatMAD(sell - cost)} / unité
+                {t("estimatedMargin", { pct: previewMargin })} — {t("benefitPerUnit", { amount: formatMAD(sell - cost) })}
               </span>
             </div>
           )}
@@ -234,13 +235,11 @@ function ProductModal({
           {/* Stock */}
           <div>
             <label className="block text-xs font-semibold text-[#64748B] mb-1.5">
-              Stock initial <span className="text-[#DC2626]">*</span>
+              {t("initialStock")} <span className="text-[#DC2626]">*</span>
             </label>
             <input
-              type="number"
-              min="0"
-              className={inputClass}
-              placeholder="0"
+              type="number" min="0"
+              className={inputClass} placeholder="0"
               value={form.stockQuantity}
               onChange={(e) => set("stockQuantity", e.target.value)}
             />
@@ -253,13 +252,13 @@ function ProductModal({
               disabled={loading}
               className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-60"
               style={{ background: "linear-gradient(135deg, #4361EE, #3254D4)" }}>
-              {loading ? "En cours..." : mode === "add" ? "Ajouter le produit" : "Enregistrer"}
+              {loading ? t("inProgress") : mode === "add" ? t("addBtn") : t("saveBtn")}
             </button>
             <button
               type="button"
               onClick={onClose}
               className="px-4 py-2.5 rounded-xl text-sm font-semibold text-[#64748B] border border-[#E2E8F0] hover:bg-[#F8FAFC] transition-all">
-              Annuler
+              {t("cancelBtn")}
             </button>
           </div>
         </form>
@@ -279,6 +278,7 @@ function ProductCard({
   index: number;
   onEdit: (p: MockProduct) => void;
 }) {
+  const t = useTranslations("AdminProducts");
   const { toggleProductActive } = useStore();
   const palette = CARD_PALETTE[index % CARD_PALETTE.length];
   const Icon = getProductIcon(product.title);
@@ -287,10 +287,10 @@ function ProductCard({
 
   const stockStatus =
     product.stockQuantity === 0
-      ? { label: "Rupture", cls: "bg-[#FEF2F2] text-[#DC2626] border-[#FECACA]" }
+      ? { label: t("outOfStock"), cls: "bg-[#FEF2F2] text-[#DC2626] border-[#FECACA]" }
       : product.stockQuantity < 10
-      ? { label: `${product.stockQuantity} restants`, cls: "bg-[#FFF7ED] text-[#C2410C] border-[#FED7AA]" }
-      : { label: `${product.stockQuantity} en stock`, cls: "bg-[#F0FDF4] text-[#16A34A] border-[#BBF7D0]" };
+      ? { label: t("remaining", { count: product.stockQuantity }), cls: "bg-[#FFF7ED] text-[#C2410C] border-[#FED7AA]" }
+      : { label: t("inStockUnit", { count: product.stockQuantity }), cls: "bg-[#F0FDF4] text-[#16A34A] border-[#BBF7D0]" };
 
   return (
     <div className={`card flex flex-col transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${!product.isActive ? "opacity-60" : ""}`}>
@@ -298,17 +298,15 @@ function ProductCard({
       <div className="relative w-full h-36 rounded-t-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
         style={{ background: palette.bg }}>
         <Icon className="w-14 h-14 opacity-70" style={{ color: palette.color }} />
-        {/* Product ID chip */}
         <span className="absolute bottom-2 right-2 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/80 backdrop-blur-sm"
           style={{ color: "#64748B" }}>
           {product.productId}
         </span>
-        {/* Inactive overlay */}
         {!product.isActive && (
           <div className="absolute inset-0 flex items-center justify-center"
             style={{ background: "rgba(255,255,255,0.5)" }}>
             <span className="text-xs font-bold px-3 py-1 rounded-full bg-white text-[#DC2626] border border-[#FECACA] shadow-sm">
-              Inactif
+              {t("inactiveLabel")}
             </span>
           </div>
         )}
@@ -316,7 +314,6 @@ function ProductCard({
 
       {/* Body */}
       <div className="p-4 flex-1 flex flex-col gap-3">
-        {/* Name + description */}
         <div>
           <h3 className="font-bold text-[#1E293B] text-sm leading-snug">{product.title}</h3>
           {product.description && (
@@ -327,19 +324,19 @@ function ProductCard({
         {/* Pricing grid */}
         <div className="grid grid-cols-2 gap-2 p-3 rounded-xl" style={{ background: "#F8FAFC" }}>
           <div>
-            <p className="text-[10px] text-[#94A3B8] font-medium">Prix d'achat</p>
+            <p className="text-[10px] text-[#94A3B8] font-medium">{t("sourcingPrice")}</p>
             <p className="font-bold text-sm text-[#1E293B]">{formatMAD(product.sourcingPrice)}</p>
           </div>
           <div>
-            <p className="text-[10px] text-[#94A3B8] font-medium">Prix de vente</p>
+            <p className="text-[10px] text-[#94A3B8] font-medium">{t("sellingPrice")}</p>
             <p className="font-bold text-sm" style={{ color: "#FB923C" }}>{formatMAD(product.sellingPrice)}</p>
           </div>
           <div>
-            <p className="text-[10px] text-[#94A3B8] font-medium">Marge</p>
+            <p className="text-[10px] text-[#94A3B8] font-medium">{t("margin")}</p>
             <p className="font-black text-sm" style={{ color: "#16A34A" }}>+{mgn}%</p>
           </div>
           <div>
-            <p className="text-[10px] text-[#94A3B8] font-medium">Bénéfice / unité</p>
+            <p className="text-[10px] text-[#94A3B8] font-medium">{t("profitPerUnit")}</p>
             <p className="font-bold text-sm" style={{ color: "#4361EE" }}>{formatMAD(profit)}</p>
           </div>
         </div>
@@ -368,20 +365,22 @@ function ProductCard({
           <div className="flex items-center gap-2">
             <Toggle
               checked={product.isActive}
+              activeLabel={t("active")}
+              inactiveLabel={t("inactive")}
               onChange={() => {
                 toggleProductActive(product.productId);
-                toast.success(product.isActive ? "Produit désactivé" : "Produit activé");
+                toast.success(product.isActive ? t("toastDeactivated") : t("toastActivated"));
               }}
             />
             <span className="text-xs text-[#64748B]">
-              {product.isActive ? "Actif" : "Inactif"}
+              {product.isActive ? t("active") : t("inactive")}
             </span>
           </div>
           <button
             onClick={() => onEdit(product)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[#E2E8F0] text-[#64748B] hover:text-[#4361EE] hover:border-[#4361EE] hover:bg-[#EEF2FF] transition-all">
             <Pencil className="w-3 h-3" />
-            Modifier
+            {t("edit")}
           </button>
         </div>
       </div>
@@ -394,6 +393,7 @@ function ProductCard({
 type FilterStatus = "all" | "active" | "inactive";
 
 export default function AdminProductsPage() {
+  const t = useTranslations("AdminProducts");
   const { products } = useStore();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
@@ -418,16 +418,24 @@ export default function AdminProductsPage() {
   const outOfStock    = products.filter((p) => p.stockQuantity === 0).length;
   const totalStock    = products.reduce((s, p) => s + p.stockQuantity, 0);
 
+  const stats = [
+    { label: t("statTotal"),     value: products.length, icon: Layers,        iconBg: "#EEF2FF", iconColor: "#4361EE" },
+    { label: t("statActive"),    value: activeCount,     icon: TrendingUp,    iconBg: "#F0FDF4", iconColor: "#16A34A" },
+    { label: t("statInactive"),  value: inactiveCount,   icon: Package,       iconBg: "#F8FAFC", iconColor: "#94A3B8" },
+    { label: t("statOutOfStock"),value: outOfStock,      icon: AlertTriangle, iconBg: "#FEF2F2", iconColor: "#DC2626" },
+  ];
+
+  const filterChips: { key: FilterStatus; label: string }[] = [
+    { key: "all",      label: t("filterAll",      { count: products.length }) },
+    { key: "active",   label: t("filterActive",   { count: activeCount }) },
+    { key: "inactive", label: t("filterInactive", { count: inactiveCount }) },
+  ];
+
   return (
     <div className="p-6 space-y-5 animate-fadeIn">
       {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: "Total produits", value: products.length, icon: Layers,       iconBg: "#EEF2FF", iconColor: "#4361EE" },
-          { label: "Actifs",         value: activeCount,     icon: TrendingUp,   iconBg: "#F0FDF4", iconColor: "#16A34A" },
-          { label: "Inactifs",       value: inactiveCount,   icon: Package,      iconBg: "#F8FAFC", iconColor: "#94A3B8" },
-          { label: "Rupture stock",  value: outOfStock,      icon: AlertTriangle,iconBg: "#FEF2F2", iconColor: "#DC2626" },
-        ].map(({ label, value, icon: Icon, iconBg, iconColor }) => (
+        {stats.map(({ label, value, icon: Icon, iconBg, iconColor }) => (
           <div key={label} className="card p-4 flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: iconBg }}>
@@ -448,7 +456,7 @@ export default function AdminProductsPage() {
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
           <input
             type="text"
-            placeholder="Rechercher par nom ou ID..."
+            placeholder={t("searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pr-9 pl-3 py-2 rounded-xl border border-[#E2E8F0] text-sm text-[#1E293B] focus:outline-none focus:ring-2 focus:ring-[#4361EE]/30 focus:border-[#4361EE] bg-white"
@@ -457,11 +465,7 @@ export default function AdminProductsPage() {
 
         {/* Status filter chips */}
         <div className="flex gap-1.5">
-          {([
-            { key: "all",      label: `Tous (${products.length})` },
-            { key: "active",   label: `Actifs (${activeCount})` },
-            { key: "inactive", label: `Inactifs (${inactiveCount})` },
-          ] as { key: FilterStatus; label: string }[]).map(({ key, label }) => (
+          {filterChips.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setStatusFilter(key)}
@@ -479,16 +483,16 @@ export default function AdminProductsPage() {
         {/* Stock summary pill */}
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#E2E8F0] bg-white text-xs text-[#64748B]">
           <Layers className="w-3.5 h-3.5 text-[#4361EE]" />
-          {totalStock} unités en stock
+          {totalStock} {t("inStock")}
         </div>
 
-        {/* Add button — pushed to start (right in RTL) */}
+        {/* Add button */}
         <button
           onClick={() => setModal({ mode: "add" })}
           className="mr-auto flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white shadow-sm transition-all hover:opacity-90 active:scale-[0.98]"
           style={{ background: "linear-gradient(135deg, #4361EE 0%, #3254D4 100%)" }}>
           <Plus className="w-4 h-4" />
-          Ajouter un produit
+          {t("addProduct")}
         </button>
       </div>
 
@@ -496,7 +500,7 @@ export default function AdminProductsPage() {
       {filtered.length === 0 ? (
         <div className="card p-16 text-center">
           <Package className="w-12 h-12 mx-auto mb-4 opacity-20 text-[#4361EE]" />
-          <p className="text-[#64748B] text-sm">Aucun produit ne correspond à votre recherche</p>
+          <p className="text-[#64748B] text-sm">{t("noResults")}</p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">

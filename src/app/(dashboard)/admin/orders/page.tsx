@@ -1,26 +1,14 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useStore } from "@/lib/store";
 import type { OrderStatus } from "@/lib/store";
 import { OrderStatusBadge } from "@/components/ui/Badge";
 import { formatMAD } from "@/lib/utils";
 import { Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 
-// ─── Status filter chips ──────────────────────────────────────────────────────
-
 type StatusFilter = "ALL" | OrderStatus;
-
-const STATUS_CHIPS: { key: StatusFilter; label: string }[] = [
-  { key: "ALL",             label: "الكل" },
-  { key: "PENDING_BALANCE", label: "رصيد غير كافٍ" },
-  { key: "PENDING_CONFIRM", label: "في انتظار التأكيد" },
-  { key: "READY_TO_SHIP",   label: "جاهز للشحن" },
-  { key: "SHIPPED",         label: "تم الشحن" },
-  { key: "DELIVERED",       label: "تم التسليم" },
-  { key: "CANCELLED",       label: "ملغي" },
-  { key: "NO_ANSWER",       label: "لا يرد" },
-];
 
 const STATUS_COLORS: Record<StatusFilter, { bg: string; text: string; border: string }> = {
   ALL:             { bg: "#4361EE", text: "#fff",    border: "#4361EE" },
@@ -35,15 +23,31 @@ const STATUS_COLORS: Record<StatusFilter, { bg: string; text: string; border: st
 
 const PAGE_SIZE = 15;
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 export default function AdminOrdersPage() {
+  const t = useTranslations("AdminOrders");
   const { sellers, orders } = useStore();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [sellerFilter, setSellerFilter] = useState("");
   const [cityFilter, setCityFilter] = useState("");
   const [page, setPage] = useState(1);
+
+  const STATUS_CHIPS: { key: StatusFilter; label: string }[] = [
+    { key: "ALL",             label: t("chipAll") },
+    { key: "PENDING_BALANCE", label: t("chipPendingBalance") },
+    { key: "PENDING_CONFIRM", label: t("chipPendingConfirm") },
+    { key: "READY_TO_SHIP",   label: t("chipReadyToShip") },
+    { key: "SHIPPED",         label: t("chipShipped") },
+    { key: "DELIVERED",       label: t("chipDelivered") },
+    { key: "CANCELLED",       label: t("chipCancelled") },
+    { key: "NO_ANSWER",       label: t("chipNoAnswer") },
+  ];
+
+  const colHeaders = [
+    t("colOrder"), t("colSeller"), t("colCustomer"), t("colPhone"),
+    t("colCity"), t("colProduct"), t("colQty"), t("colCost"),
+    t("colStatus"), t("colDate"),
+  ];
 
   const sellerList = sellers.filter((s) => s.role === "SELLER");
   const cities = useMemo(
@@ -95,7 +99,7 @@ export default function AdminOrdersPage() {
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
             <input
               type="text"
-              placeholder="بحث برقم الطلب أو اسم العميل..."
+              placeholder={t("searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pr-9 pl-3 py-2 rounded-xl border border-[#E2E8F0] text-sm text-[#1E293B] focus:outline-none focus:ring-2 focus:ring-[#4361EE]/30 focus:border-[#4361EE] bg-white"
@@ -107,7 +111,7 @@ export default function AdminOrdersPage() {
             value={sellerFilter}
             onChange={(e) => setSellerFilter(e.target.value)}
             className="px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm text-[#1E293B] focus:outline-none focus:ring-2 focus:ring-[#4361EE]/30 bg-white">
-            <option value="">كل البائعين</option>
+            <option value="">{t("allSellers")}</option>
             {sellerList.map((s) => (
               <option key={s.sellerId} value={s.sellerId}>{s.name}</option>
             ))}
@@ -118,7 +122,7 @@ export default function AdminOrdersPage() {
             value={cityFilter}
             onChange={(e) => setCityFilter(e.target.value)}
             className="px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm text-[#1E293B] focus:outline-none focus:ring-2 focus:ring-[#4361EE]/30 bg-white">
-            <option value="">كل المدن</option>
+            <option value="">{t("allCities")}</option>
             {cities.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
@@ -129,7 +133,7 @@ export default function AdminOrdersPage() {
               onClick={clearFilters}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#DC2626] border border-[#FECACA] bg-[#FEF2F2] hover:bg-[#FEE2E2] transition-all">
               <X className="w-3.5 h-3.5" />
-              مسح الفلاتر
+              {t("clearFilters")}
             </button>
           )}
         </div>
@@ -163,7 +167,7 @@ export default function AdminOrdersPage() {
         <div className="px-5 py-3 border-b border-[#F1F5F9] flex items-center justify-between"
           style={{ background: "#F8FAFC" }}>
           <p className="text-xs font-semibold text-[#64748B]">
-            {filtered.length} طلب — صفحة {page} من {Math.max(1, totalPages)}
+            {filtered.length} {t("ordersCount")} — {t("page")} {page} {t("of")} {Math.max(1, totalPages)}
           </p>
         </div>
 
@@ -171,7 +175,7 @@ export default function AdminOrdersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[#F1F5F9]">
-                {["رقم الطلب", "البائع", "العميل", "الهاتف", "المدينة", "المنتج", "الكمية", "التكلفة", "الحالة", "التاريخ"].map((h) => (
+                {colHeaders.map((h) => (
                   <th key={h} className="py-3 px-4 text-right text-xs font-semibold text-[#94A3B8] whitespace-nowrap">
                     {h}
                   </th>
@@ -210,7 +214,7 @@ export default function AdminOrdersPage() {
               {paginated.length === 0 && (
                 <tr>
                   <td colSpan={10} className="py-12 text-center text-sm text-[#94A3B8]">
-                    لا توجد طلبات مطابقة للفلاتر المحددة
+                    {t("noResults")}
                   </td>
                 </tr>
               )}
@@ -223,7 +227,7 @@ export default function AdminOrdersPage() {
           <div className="px-5 py-3 border-t border-[#F1F5F9] flex items-center justify-between"
             style={{ background: "#F8FAFC" }}>
             <p className="text-xs text-[#64748B]">
-              عرض {Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)}–{Math.min(page * PAGE_SIZE, filtered.length)} من {filtered.length}
+              {t("showing")} {Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)}–{Math.min(page * PAGE_SIZE, filtered.length)} {t("of")} {filtered.length}
             </p>
             <div className="flex items-center gap-1">
               <button
